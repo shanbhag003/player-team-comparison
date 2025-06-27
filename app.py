@@ -20,13 +20,13 @@ if comparison_type == "Players":
         "Select Player 1",
         options=player_names,
         key="p1",
-        help="Start typing a name (at least 2 letters)"
+        help="Type at least 2 letters"
     )
     player2 = st.selectbox(
         "Select Player 2",
         options=player_names,
         key="p2",
-        help="Start typing a name (at least 2 letters)"
+        help="Type at least 2 letters"
     )
 
     if st.button("Compare Players"):
