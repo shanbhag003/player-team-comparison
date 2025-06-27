@@ -54,4 +54,20 @@ def get_all_teams():
         if not team_dict:
             raise ValueError("No teams found")
         return team_dict
-    except Exception
+    except Exception as e:
+        print(f"FBref error: {e}")
+        # fallback example teams
+        return {
+            "Manchester City": "https://fbref.com/en/squads/b8fd03ef/Manchester-City-Stats",
+            "Real Madrid": "https://fbref.com/en/squads/53a2f082/Real-Madrid-Stats"
+        }
+
+@st.cache_data(show_spinner=False)
+def get_player_stats(url):
+    tables = pd.read_html(url)
+    return tables[0] if tables else pd.DataFrame()
+
+@st.cache_data(show_spinner=False)
+def get_team_stats(url):
+    tables = pd.read_html(url)
+    return tables[0] if tables else pd.DataFrame()
