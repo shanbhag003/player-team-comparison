@@ -4,7 +4,6 @@ import requests
 import json
 from bs4 import BeautifulSoup
 import re
-import os
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
@@ -66,10 +65,22 @@ def get_all_teams():
 
 @st.cache_data(show_spinner=False)
 def get_player_stats(url):
-    tables = pd.read_html(url)
-    return tables[0] if tables else pd.DataFrame()
+    try:
+        res = requests.get(url, headers=HEADERS, timeout=10)
+        res.raise_for_status()
+        tables = pd.read_html(res.text)
+        return tables[0] if tables else pd.DataFrame()
+    except Exception as e:
+        print(f"Error fetching player stats from {url}:", e)
+        return pd.DataFrame({"Error": ["Unable to fetch stats. Try a different player."]})
 
 @st.cache_data(show_spinner=False)
 def get_team_stats(url):
-    tables = pd.read_html(url)
-    return tables[0] if tables else pd.DataFrame()
+    try:
+        res = requests.get(url, headers=HEADERS, timeout=10)
+        res.raise_for_status()
+        tables = pd.read_html(res.text)
+        return tables[0] if tables else pd.DataFrame()
+    except Exception as e:
+        print(f"Error fetching team stats from {url}:", e)
+        return pd.DataFrame({"Error": ["Unable to fetch stats. Try a different team."]})
