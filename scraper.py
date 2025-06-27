@@ -3,49 +3,42 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
-FBREF_PLAYER_INDEX = "https://fbref.com/en/players/"
-FBREF_TEAM_INDEX = "https://fbref.com/en/squads/"
-
 @st.cache_data(show_spinner=False)
 def get_all_players():
-    res = requests.get(FBREF_PLAYER_INDEX)
+    res = requests.get("https://fbref.com/en/players/")
     soup = BeautifulSoup(res.text, "lxml")
-    table = soup.find("div", {"id": "div_players"})
-    players = table.find_all("p")
+    links = soup.select("div#content a[href^='/en/players/']")
 
     player_dict = {}
-    for p in players:
-        try:
-            a = p.find("a")
-            name = a.text.strip()
-            href = a["href"]
+    for a in links:
+        href = a.get("href", "")
+        name = a.text.strip()
+        if href.count("/") == 4:  # /en/players/{id}/{name}
             full_url = "https://fbref.com" + href
             player_dict[name] = full_url
-        except:
-            continue
     return player_dict
 
 @st.cache_data(show_spinner=False)
 def get_all_teams():
-    res = requests.get(FBREF_TEAM_INDEX)
+    res = requests.get("https://fbref.com/en/squads/")
     soup = BeautifulSoup(res.text, "lxml")
-    table = soup.find("div", {"id": "content"})
-    teams = table.find_all("a", href=True)
+    links = soup.select("div#content a[href^='/en/squads/']")
 
     team_dict = {}
-    for a in teams:
+    for a in links:
+        href = a.get("href", "")
         name = a.text.strip()
-        href = a["href"]
-        if "/en/squads/" in href and "matchlogs" not in href:
-            team_dict[name] = "https://fbref.com" + href
+        if href.count("/") == 4:  # /en/squads/{id}/{name}
+            full_url = "https://fbref.com" + href
+            team_dict[name] = full_url
     return team_dict
 
 @st.cache_data(show_spinner=False)
 def get_player_stats(url):
     tables = pd.read_html(url)
-    return tables[0]  # You can refine this index as needed
+    return tables[0]  # update if needed
 
 @st.cache_data(show_spinner=False)
 def get_team_stats(url):
     tables = pd.read_html(url)
-    return tables[0]  # You can refine this index as needed
+    return tables[0]  # update if needed
