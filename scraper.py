@@ -54,4 +54,4 @@ def get_all_teams():
         if not team_dict:
             raise ValueError("No teams found")
         return team_dict
-    except Exceptio
+    except Exception
