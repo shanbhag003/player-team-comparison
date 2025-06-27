@@ -1,88 +1,85 @@
 import streamlit as st
 import pandas as pd
+import plotly.graph_objects as go
 from scraper import (
-    get_player_stats,
-    get_team_stats,
-    get_all_players,
-    get_all_teams
+  get_player_stats,
+  get_team_stats,
+  get_all_players,
+  get_all_teams
 )
 
 st.set_page_config(layout="wide")
 st.title("⚽ Player/Team Comparison Tool")
 
-comparison_type = st.radio("Compare:", ["Players", "Teams"])
+option = st.radio("Compare", ["Players", "Teams"])
 
-if comparison_type == "Players":
-    player_dict = get_all_players()
-    player_names = sorted(player_dict.keys())
-
-    player1 = st.selectbox(
-        "Select Player 1",
-        options=player_names,
-        key="p1",
-        help="Type at least 2 letters"
-    )
-    player2 = st.selectbox(
-        "Select Player 2",
-        options=player_names,
-        key="p2",
-        help="Type at least 2 letters"
-    )
-
-    if st.button("Compare Players"):
-        url1 = player_dict.get(player1)
-        url2 = player_dict.get(player2)
-
-        if url1 and url2:
-            try:
-                df1 = get_player_stats(url1)
-                df2 = get_player_stats(url2)
-
-                st.subheader(f"{player1} Stats")
-                st.dataframe(df1)
-
-                st.subheader(f"{player2} Stats")
-                st.dataframe(df2)
-            except Exception as e:
-                st.error(f"Error fetching player data: {e}")
-        else:
-            st.error("Player URLs not found.")
-
-elif comparison_type == "Teams":
-    team_dict = get_all_teams()
-    team_names = sorted(team_dict.keys())
-
-    if len(team_names) == 0:
-        st.error("No teams found. FBref may have changed structure.")
+if option == "Players":
+    players = get_all_players()
+    if not players:
+        st.warning("No player data available.")
     else:
-        team1 = st.selectbox(
-            "Select Team 1",
-            options=team_names,
-            key="t1",
-            help="Start typing a team name"
-        )
-        team2 = st.selectbox(
-            "Select Team 2",
-            options=team_names,
-            key="t2",
-            help="Start typing a team name"
-        )
+        player1_name = st.selectbox("Select Player 1", options=list(players.keys()), key="p1")
+        player2_name = st.selectbox("Select Player 2", options=list(players.keys()), key="p2")
 
-        if st.button("Compare Teams"):
-            url1 = team_dict.get(team1)
-            url2 = team_dict.get(team2)
+        if player1_name and player2_name:
+            df1 = get_player_stats(players[player1_name])
+            df2 = get_player_stats(players[player2_name])
 
-            if url1 and url2:
+            st.subheader(f"Stats for {player1_name}")
+            st.dataframe(df1)
+            st.subheader(f"Stats for {player2_name}")
+            st.dataframe(df2)
+
+            def extract_selected_stats(df):
+                df.columns = df.columns.map(str)
                 try:
-                    df1 = get_team_stats(url1)
-                    df2 = get_team_stats(url2)
-
-                    st.subheader(f"{team1} Stats")
-                    st.dataframe(df1)
-
-                    st.subheader(f"{team2} Stats")
-                    st.dataframe(df2)
+                    row = df[df["90s"].astype(str).str.contains(r"^\d")].head(1)
+                    stats = {
+                        "G90": float(row["Gls"].values[0]),
+                        "xG90": float(row["xG"].values[0]),
+                        "Sh90": float(row["Sh"].values[0]),
+                        "A90": float(row["Ast"].values[0]),
+                        "xA90": float(row["xA"].values[0]),
+                        "KP90": float(row["KP"].values[0])
+                    }
+                    return stats
                 except Exception as e:
-                    st.error(f"Error fetching team data: {e}")
-            else:
-                st.error("Team URLs not found.")
+                    st.warning(f"Could not extract radar stats: {e}")
+                    return {}
+
+            stats1 = extract_selected_stats(df1)
+            stats2 = extract_selected_stats(df2)
+
+            if stats1 and stats2:
+                categories = list(stats1.keys())
+                vals1 = list(stats1.values())
+                vals2 = list(stats2.values())
+
+                fig = go.Figure()
+                fig.add_trace(go.Scatterpolar(r=vals1, theta=categories, fill='toself', name=player1_name))
+                fig.add_trace(go.Scatterpolar(r=vals2, theta=categories, fill='toself', name=player2_name))
+
+                fig.update_layout(
+                    polar=dict(radialaxis=dict(visible=True, range=[0, max(vals1 + vals2) * 1.2])),
+                    showlegend=True,
+                    title="🔵 Player Comparison Radar"
+                )
+
+                st.plotly_chart(fig, use_container_width=True)
+
+elif option == "Teams":
+    teams = get_all_teams()
+    if not teams:
+        st.warning("No team data available.")
+    else:
+        team1_name = st.selectbox("Select Team 1", options=list(teams.keys()), key="t1")
+        team2_name = st.selectbox("Select Team 2", options=list(teams.keys()), key="t2")
+
+        if team1_name and team2_name:
+            df1 = get_team_stats(teams[team1_name])
+            df2 = get_team_stats(teams[team2_name])
+
+            st.subheader(f"Stats for {team1_name}")
+            st.dataframe(df1)
+            st.subheader(f"Stats for {team2_name}")
+            st.dataframe(df2)
